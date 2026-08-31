@@ -153,11 +153,6 @@ export default function Home() {
                 );
               })}
             </div>
-            {plateAppearanceOver && (
-              <Button onClick={resetPlateAppearance} className="mt-3 w-full bg-red-500 text-white hover:bg-red-400">
-                <RotateCcw aria-hidden="true" /> Face him again <kbd className="ml-auto rounded border border-white/20 bg-black/15 px-1.5 py-0.5 font-mono text-[9px] uppercase">Space</kbd>
-              </Button>
-            )}
           </aside>
 
           <section className="order-1 overflow-hidden rounded-xl border border-white/8 bg-[#0a1626] lg:order-2">
@@ -215,6 +210,17 @@ export default function Home() {
               <Stat label="Zone swing" value={formatRate(MATCHUP_MODEL.zone.swing)} /><Stat label="Chase" value={formatRate(MATCHUP_MODEL.chase.swing)} />
               <Stat label="Zone contact" value={formatRate(MATCHUP_MODEL.zone.contact)} /><Stat label="Chase contact" value={formatRate(MATCHUP_MODEL.chase.contact)} />
             </dl>
+            <div className="mb-4 min-h-10">
+              <Button
+                onClick={resetPlateAppearance}
+                disabled={!plateAppearanceOver}
+                aria-hidden={!plateAppearanceOver}
+                tabIndex={plateAppearanceOver ? 0 : -1}
+                className={`w-full bg-red-500 text-white hover:bg-red-400 ${plateAppearanceOver ? '' : 'invisible'}`}
+              >
+                <RotateCcw aria-hidden="true" /> Face him again <kbd className="ml-auto rounded border border-white/20 bg-black/15 px-1.5 py-0.5 font-mono text-[9px] uppercase">Space</kbd>
+              </Button>
+            </div>
             <div className="rounded-lg border border-blue-300/15 bg-blue-300/[0.06] p-3 text-xs leading-5 text-blue-100/65">Results adjust for count, pitch type, location hot zone, command, and the pitches already thrown in this at-bat.</div>
             <p className="mt-4 text-[10px] leading-4 text-slate-600">Data snapshot: Aug 30, 2026 · Source: Baseball Savant · Unofficial prototype</p>
           </aside>
