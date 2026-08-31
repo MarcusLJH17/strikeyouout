@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowDownLeft, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUp, RotateCcw, Shuffle, UserRound } from 'lucide-react';
+import { ArrowDown, ArrowDownLeft, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUp, RotateCcw, Shuffle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { DAILY_MATCHUP, type Pitch } from '@/lib/daily-matchup';
@@ -25,6 +25,16 @@ export default function Home() {
 
   useEffect(() => {
     function selectPitchWithKeyboard(event: KeyboardEvent) {
+      if (event.code === 'Space' && plateAppearanceOver) {
+        event.preventDefault();
+        setCount({ balls: 0, strikes: 0 });
+        setAim(INITIAL_AIM);
+        setResult(null);
+        setPitchNumber(1);
+        setPlateAppearanceOver(false);
+        return;
+      }
+
       const pitchIndex = Number(event.key) - 1;
       const pitch = DAILY_MATCHUP.pitcher.pitches[pitchIndex];
       if (!pitch || event.ctrlKey || event.metaKey || event.altKey) return;
@@ -34,7 +44,7 @@ export default function Home() {
 
     window.addEventListener('keydown', selectPitchWithKeyboard);
     return () => window.removeEventListener('keydown', selectPitchWithKeyboard);
-  }, []);
+  }, [plateAppearanceOver]);
 
   function updateAim(clientX: number, clientY: number) {
     const rect = targetRef.current?.getBoundingClientRect();
@@ -134,6 +144,11 @@ export default function Home() {
                 );
               })}
             </div>
+            {plateAppearanceOver && (
+              <Button onClick={resetPlateAppearance} className="mt-3 w-full bg-red-500 text-white hover:bg-red-400">
+                <RotateCcw aria-hidden="true" /> Face him again <kbd className="ml-auto rounded border border-white/20 bg-black/15 px-1.5 py-0.5 font-mono text-[9px] uppercase">Space</kbd>
+              </Button>
+            )}
           </aside>
 
           <section className="order-1 overflow-hidden rounded-xl border border-white/8 bg-[#0a1626] lg:order-2">
@@ -144,12 +159,12 @@ export default function Home() {
             </div>
 
             <div className="relative mx-auto aspect-[16/11] min-h-[410px] max-w-[850px] overflow-hidden bg-[#071a2d]">
-              <div className={`pointer-events-none absolute top-[28%] z-10 text-center opacity-70 ${DAILY_MATCHUP.batter.bats === 'L' ? 'left-[4%]' : 'right-[4%]'}`}>
-                <div className="mx-auto grid size-11 place-items-center rounded-full bg-black/55 text-slate-700 shadow-[0_10px_30px_#000]">
-                  <UserRound className="size-8" strokeWidth={1.2} aria-hidden="true" />
-                </div>
+              <div className="pointer-events-none absolute inset-x-[12%] bottom-0 h-[30%] bg-[linear-gradient(to_bottom,transparent_0%,rgba(22,54,43,.38)_32%,#17372d_100%)]" />
+              <div className="pointer-events-none absolute bottom-[5%] left-1/2 h-5 w-7 -translate-x-1/2 bg-[#d6d4c7]/35 [clip-path:polygon(50%_0,100%_35%,82%_100%,18%_100%,0_35%)]" />
+
+              <div className={`pointer-events-none absolute top-[28%] z-10 text-center opacity-70 ${DAILY_MATCHUP.batter.bats === 'L' ? 'left-[14%]' : 'right-[14%]'}`}>
+                <div className="mx-auto size-11 rounded-full bg-black/55 shadow-[0_10px_30px_#000]" />
                 <div className={`mt-[-2px] h-28 w-16 rounded-[45%_45%_24%_24%] bg-black/55 blur-[1px] ${DAILY_MATCHUP.batter.bats === 'L' ? '-rotate-6' : 'rotate-6'}`} />
-                <div className={`absolute top-[58px] h-3 w-24 rounded-full bg-black/60 ${DAILY_MATCHUP.batter.bats === 'L' ? 'left-8 -rotate-[55deg]' : 'right-8 rotate-[55deg]'}`} />
                 <p className="mt-2 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-600">{DAILY_MATCHUP.batter.bats}HB</p>
               </div>
 
@@ -177,11 +192,8 @@ export default function Home() {
               <div className={`pointer-events-none absolute bottom-[-20%] z-10 opacity-75 ${DAILY_MATCHUP.pitcher.throws === 'R' ? 'right-[2%]' : 'left-[2%]'}`}>
                 <div className="ml-10 size-20 rounded-full bg-black shadow-[0_0_40px_#000]" />
                 <div className={`mt-[-3px] h-48 w-40 rounded-[48%_48%_18%_18%] bg-black shadow-[0_0_50px_#000] ${DAILY_MATCHUP.pitcher.throws === 'R' ? 'rotate-6' : '-rotate-6'}`} />
-                <div className={`absolute top-[74px] h-16 w-32 rounded-full bg-black ${DAILY_MATCHUP.pitcher.throws === 'R' ? 'right-[118px] rotate-[22deg]' : 'left-[118px] -rotate-[22deg]'}`} />
               </div>
             </div>
-
-            {plateAppearanceOver && <div className="flex justify-center bg-[#071a2d] pb-4"><Button onClick={resetPlateAppearance} size="sm" className="bg-red-500 text-white hover:bg-red-400"><RotateCcw aria-hidden="true" /> Face him again</Button></div>}
           </section>
 
           <aside className="order-3 rounded-xl border border-white/8 bg-card/90 p-4">
