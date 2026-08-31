@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
-import { RotateCcw, Shuffle, UserRound } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDown, ArrowDownLeft, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUp, RotateCcw, Shuffle, UserRound } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { DAILY_MATCHUP, type Pitch } from '@/lib/daily-matchup';
@@ -22,6 +22,19 @@ export default function Home() {
   const targetRef = useRef<HTMLButtonElement>(null);
 
   const countLabel = useMemo(() => `${count.balls}–${count.strikes}`, [count]);
+
+  useEffect(() => {
+    function selectPitchWithKeyboard(event: KeyboardEvent) {
+      const pitchIndex = Number(event.key) - 1;
+      const pitch = DAILY_MATCHUP.pitcher.pitches[pitchIndex];
+      if (!pitch || event.ctrlKey || event.metaKey || event.altKey) return;
+      event.preventDefault();
+      setSelectedPitch(pitch);
+    }
+
+    window.addEventListener('keydown', selectPitchWithKeyboard);
+    return () => window.removeEventListener('keydown', selectPitchWithKeyboard);
+  }, []);
 
   function updateAim(clientX: number, clientY: number) {
     const rect = targetRef.current?.getBoundingClientRect();
@@ -93,7 +106,7 @@ export default function Home() {
             </div>
             <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Choose a pitch</p>
             <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
-              {DAILY_MATCHUP.pitcher.pitches.map((pitch) => {
+              {DAILY_MATCHUP.pitcher.pitches.map((pitch, index) => {
                 const active = selectedPitch.code === pitch.code;
                 return (
                   <button
@@ -104,8 +117,14 @@ export default function Home() {
                     className={`group rounded-lg border px-3 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 ${active ? 'border-red-400/70 bg-red-400/10 shadow-[inset_3px_0_0_#f24c54]' : 'border-white/8 bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.05]'}`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-extrabold">{pitch.shortName}</span>
-                      <span className={`size-2 rounded-full ${pitch.color}`} />
+                      <span className="flex items-center gap-2 text-sm font-extrabold">
+                        <kbd className="grid size-5 place-items-center rounded border border-white/10 bg-black/20 font-mono text-[10px] text-slate-500">{index + 1}</kbd>
+                        {pitch.shortName}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <MovementArrow pitch={pitch} throws={DAILY_MATCHUP.pitcher.throws} />
+                        <span className={`size-2 rounded-full ${pitch.color}`} />
+                      </span>
                     </div>
                     <p className="mt-1 font-mono text-xs text-slate-400">{pitch.avgVelocity.toFixed(1)} avg · {pitch.maxVelocity.toFixed(1)} max</p>
                     <div className="mt-2 flex gap-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
@@ -124,14 +143,14 @@ export default function Home() {
               {result && <p className="mt-1 text-xs text-slate-500">Missed target by {result.missInches.toFixed(1)} in.</p>}
             </div>
 
-            <div className="relative mx-auto aspect-[16/11] min-h-[410px] max-w-[850px] overflow-hidden bg-[radial-gradient(circle_at_50%_72%,#243a2c_0,#162a22_24%,#0a1820_58%,#07111f_100%)]">
-              <div className="absolute inset-x-0 bottom-0 h-[38%] bg-[linear-gradient(165deg,transparent_38%,rgba(132,91,52,.34)_39%,rgba(132,91,52,.34)_61%,transparent_62%)]" />
-              <div className="absolute left-1/2 top-[12%] -translate-x-1/2 text-center">
+            <div className="relative mx-auto aspect-[16/11] min-h-[410px] max-w-[850px] overflow-hidden bg-[#071a2d]">
+              <div className={`pointer-events-none absolute top-[28%] z-10 text-center opacity-70 ${DAILY_MATCHUP.batter.bats === 'L' ? 'left-[4%]' : 'right-[4%]'}`}>
                 <div className="mx-auto grid size-11 place-items-center rounded-full bg-black/55 text-slate-700 shadow-[0_10px_30px_#000]">
                   <UserRound className="size-8" strokeWidth={1.2} aria-hidden="true" />
                 </div>
-                <div className="mt-[-2px] h-24 w-16 rounded-[45%_45%_24%_24%] bg-black/55 blur-[1px]" />
-                <p className="mt-2 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-600">LHB</p>
+                <div className={`mt-[-2px] h-28 w-16 rounded-[45%_45%_24%_24%] bg-black/55 blur-[1px] ${DAILY_MATCHUP.batter.bats === 'L' ? '-rotate-6' : 'rotate-6'}`} />
+                <div className={`absolute top-[58px] h-3 w-24 rounded-full bg-black/60 ${DAILY_MATCHUP.batter.bats === 'L' ? 'left-8 -rotate-[55deg]' : 'right-8 rotate-[55deg]'}`} />
+                <p className="mt-2 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-600">{DAILY_MATCHUP.batter.bats}HB</p>
               </div>
 
               <button
@@ -142,7 +161,7 @@ export default function Home() {
                 onPointerDown={(event) => { updateAim(event.clientX, event.clientY); event.currentTarget.setPointerCapture(event.pointerId); }}
                 onPointerUp={throwPitch}
                 disabled={plateAppearanceOver}
-                className="absolute left-1/2 top-[22%] h-[62%] w-[68%] max-w-[510px] -translate-x-1/2 cursor-crosshair touch-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 disabled:cursor-default"
+                className="absolute left-1/2 top-[16%] z-20 h-[70%] w-[54%] max-w-[440px] -translate-x-1/2 cursor-crosshair touch-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 disabled:cursor-default"
               >
                 <span className="absolute left-[17%] top-[8%] h-[78%] w-[66%] border-2 border-[#d9e1df]/80 bg-white/[0.025] shadow-[0_0_25px_rgba(218,229,226,.08)]">
                   <span className="absolute inset-x-0 top-1/3 border-t border-white/15" /><span className="absolute inset-x-0 top-2/3 border-t border-white/15" />
@@ -155,17 +174,14 @@ export default function Home() {
                 {result && <span className={`pointer-events-none absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full ring-4 ring-black/35 ${result.inZone ? 'bg-amber-300' : 'bg-red-400'}`} style={{ left: `${result.actual.x}%`, top: `${result.actual.y}%` }} />}
               </button>
 
-              <div className="pointer-events-none absolute bottom-[-18%] left-[8%] opacity-75 sm:left-[16%]">
+              <div className={`pointer-events-none absolute bottom-[-20%] z-10 opacity-75 ${DAILY_MATCHUP.pitcher.throws === 'R' ? 'right-[2%]' : 'left-[2%]'}`}>
                 <div className="ml-10 size-20 rounded-full bg-black shadow-[0_0_40px_#000]" />
-                <div className="mt-[-3px] h-48 w-40 rotate-[-6deg] rounded-[48%_48%_18%_18%] bg-black shadow-[0_0_50px_#000]" />
-                <div className="absolute left-[118px] top-[74px] h-16 w-32 rotate-[-22deg] rounded-full bg-black" />
+                <div className={`mt-[-3px] h-48 w-40 rounded-[48%_48%_18%_18%] bg-black shadow-[0_0_50px_#000] ${DAILY_MATCHUP.pitcher.throws === 'R' ? 'rotate-6' : '-rotate-6'}`} />
+                <div className={`absolute top-[74px] h-16 w-32 rounded-full bg-black ${DAILY_MATCHUP.pitcher.throws === 'R' ? 'right-[118px] rotate-[22deg]' : 'left-[118px] -rotate-[22deg]'}`} />
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-4 border-t border-white/8 bg-black/20 px-4 py-3">
-              <p className="text-xs text-slate-500"><span className="hidden sm:inline">Drag to aim. </span>Release to throw {selectedPitch.shortName.toLowerCase()}.</p>
-              {plateAppearanceOver && <Button onClick={resetPlateAppearance} size="sm" className="bg-red-500 text-white hover:bg-red-400"><RotateCcw aria-hidden="true" /> Face him again</Button>}
-            </div>
+            {plateAppearanceOver && <div className="flex justify-center bg-[#071a2d] pb-4"><Button onClick={resetPlateAppearance} size="sm" className="bg-red-500 text-white hover:bg-red-400"><RotateCcw aria-hidden="true" /> Face him again</Button></div>}
           </section>
 
           <aside className="order-3 rounded-xl border border-white/8 bg-card/90 p-4">
@@ -193,4 +209,14 @@ function CountLights({ label, active, total, color }: { label: string; active: n
 
 function Stat({ label, value }: { label: string; value: string }) {
   return <div><dt className="text-[9px] font-bold uppercase tracking-[0.13em] text-slate-600">{label}</dt><dd className="mt-0.5 font-mono text-lg font-bold text-slate-300">{value}</dd></div>;
+}
+
+function MovementArrow({ pitch, throws }: { pitch: Pitch; throws: 'R' | 'L' }) {
+  const mirrored = throws === 'L';
+  const className = 'size-5 text-slate-400';
+  if (pitch.movement === 'ride') return <ArrowUp aria-label="Riding movement" className={className} />;
+  if (pitch.movement === 'arm-side-drop') return mirrored ? <ArrowDownLeft aria-label="Arm-side drop" className={className} /> : <ArrowDownRight aria-label="Arm-side drop" className={className} />;
+  if (pitch.movement === 'glove-side-drop') return mirrored ? <ArrowDownRight aria-label="Glove-side drop" className={className} /> : <ArrowDownLeft aria-label="Glove-side drop" className={className} />;
+  if (pitch.movement === 'glove-side-sweep') return mirrored ? <ArrowRight aria-label="Glove-side sweep" className={className} /> : <ArrowLeft aria-label="Glove-side sweep" className={className} />;
+  return <ArrowDown aria-hidden="true" className={className} />;
 }

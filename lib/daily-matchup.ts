@@ -9,6 +9,7 @@ export type Pitch = {
   whiff: number;
   zoneRate: number;
   command: number;
+  movement: 'ride' | 'arm-side-drop' | 'glove-side-drop' | 'glove-side-sweep';
 };
 
 export const DAILY_MATCHUP = {
@@ -18,10 +19,10 @@ export const DAILY_MATCHUP = {
     name: 'Nolan McLean',
     throws: 'R' as const,
     pitches: [
-      { code: 'SI', name: 'Sinker', shortName: 'Sinker', color: 'bg-blue-400', usage: 32.8, avgVelocity: 95.0, maxVelocity: 98.6, whiff: 13.7, zoneRate: 56, command: 0.69 },
-      { code: 'FF', name: '4-Seam Fastball', shortName: '4-Seam', color: 'bg-red-400', usage: 20.4, avgVelocity: 96.1, maxVelocity: 98.7, whiff: 27.9, zoneRate: 54, command: 0.66 },
-      { code: 'CU', name: 'Curveball', shortName: 'Curve', color: 'bg-amber-300', usage: 14.8, avgVelocity: 81.9, maxVelocity: 84.7, whiff: 40.4, zoneRate: 31, command: 0.51 },
-      { code: 'ST', name: 'Sweeper', shortName: 'Sweeper', color: 'bg-violet-400', usage: 13.2, avgVelocity: 84.9, maxVelocity: 89.4, whiff: 27.4, zoneRate: 40, command: 0.58 },
+      { code: 'SI', name: 'Sinker', shortName: 'Sinker', color: 'bg-blue-400', usage: 32.8, avgVelocity: 95.0, maxVelocity: 98.6, whiff: 13.7, zoneRate: 56, command: 0.69, movement: 'arm-side-drop' },
+      { code: 'FF', name: '4-Seam Fastball', shortName: '4-Seam', color: 'bg-red-400', usage: 20.4, avgVelocity: 96.1, maxVelocity: 98.7, whiff: 27.9, zoneRate: 54, command: 0.66, movement: 'ride' },
+      { code: 'CU', name: 'Curveball', shortName: 'Curve', color: 'bg-amber-300', usage: 14.8, avgVelocity: 81.9, maxVelocity: 84.7, whiff: 40.4, zoneRate: 31, command: 0.51, movement: 'glove-side-drop' },
+      { code: 'ST', name: 'Sweeper', shortName: 'Sweeper', color: 'bg-violet-400', usage: 13.2, avgVelocity: 84.9, maxVelocity: 89.4, whiff: 27.4, zoneRate: 40, command: 0.58, movement: 'glove-side-sweep' },
     ] satisfies Pitch[],
   },
   batter: {
