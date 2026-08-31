@@ -1,9 +1,42 @@
-import { DAILY_MATCHUP, type Pitch } from '@/lib/daily-matchup';
+import { MATCHUP_MODEL, type Pitch } from '@/lib/daily-matchup';
 
 type Count = { balls: number; strikes: number };
 type Point = { x: number; y: number };
+type Outcome = 'called_strike' | 'ball' | 'whiff' | 'foul' | 'in_play_out' | 'hit' | 'extra_base';
+type RateKey = 'swing' | 'contact' | 'foulOnContact' | 'hitOnBip' | 'extraBaseOnHit';
+type RateProfile = { sample: number; swing: number; contact: number; foulOnContact: number; hitOnBip: number; extraBaseOnHit: number };
+type ModelProfile = {
+  overall: RateProfile;
+  zone: RateProfile;
+  chase: RateProfile;
+  byCount: Record<string, RateProfile>;
+  byPitch: Record<string, RateProfile>;
+  hotZones: Record<string, RateProfile>;
+  sequences: Record<string, RateProfile>;
+  commandByPitch: Record<string, { sample: number; medianMissInches: number }>;
+};
 
-export type PitchResult = { actual: Point; count: Count; inZone: boolean; message: string; missInches: number; terminal: boolean };
+const model = MATCHUP_MODEL as unknown as ModelProfile;
+const FASTBALLS = new Set(['FF', 'SI', 'FC']);
+const X_INCHES_PER_PERCENT = 17 / 66;
+const Y_INCHES_PER_PERCENT = 40 / 78;
+const RAYLEIGH_MEDIAN_FACTOR = Math.sqrt(2 * Math.log(2));
+
+export type PitchHistoryEntry = {
+  pitchCode: string;
+  actual: Point;
+  velocity: number;
+  outcome: Outcome;
+};
+
+export type PitchResult = PitchHistoryEntry & {
+  count: Count;
+  factors: string[];
+  inZone: boolean;
+  message: string;
+  missInches: number;
+  terminal: boolean;
+};
 
 function normalRandom() {
   const u = Math.max(Number.EPSILON, Math.random());
@@ -11,42 +44,147 @@ function normalRandom() {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
-const clamp = (value: number) => Math.max(-8, Math.min(108, value));
+const clampLocation = (value: number) => Math.max(-8, Math.min(108, value));
+const clampProbability = (value: number, minimum = 0.02, maximum = 0.98) => Math.max(minimum, Math.min(maximum, value));
 
-export function resolvePitch({ pitch, target, count }: { pitch: Pitch; target: Point; count: Count }): PitchResult {
-  const spread = 4.2 + (1 - pitch.command) * 16;
-  const actual = { x: clamp(target.x + normalRandom() * spread), y: clamp(target.y + normalRandom() * spread) };
-  const missInches = Math.hypot(actual.x - target.x, actual.y - target.y) * 0.32;
-  const inZone = actual.x >= 17 && actual.x <= 83 && actual.y >= 8 && actual.y <= 86;
-  const velocity = Math.max(pitch.avgVelocity - 3.5, Math.min(pitch.maxVelocity, pitch.avgVelocity + normalRandom() * 1.35));
-  const discipline = DAILY_MATCHUP.batter.discipline;
-  const swings = Math.random() < (inZone ? discipline.zoneSwing : discipline.chase);
-  const pitchLabel = `${Math.round(velocity)} mph ${pitch.name.toLowerCase()}`;
-
-  if (!swings) {
-    if (inZone) {
-      const strikes = count.strikes + 1;
-      return finish(`${pitchLabel}, called strike${strikes === 3 ? ' three' : ` ${strikes}`}`, { balls: count.balls, strikes }, actual, inZone, missInches, strikes === 3);
-    }
-    const balls = count.balls + 1;
-    return finish(`${pitchLabel}, ball ${balls}${balls === 4 ? ' — Ohtani walks' : ''}`, { balls, strikes: count.strikes }, actual, inZone, missInches, balls === 4);
-  }
-
-  const baseContact = inZone ? discipline.zoneContact : discipline.chaseContact;
-  const contactProbability = Math.max(0.32, Math.min(0.94, baseContact - (pitch.whiff / 100 - 0.25) * 0.65));
-  if (Math.random() > contactProbability) {
-    const strikes = count.strikes + 1;
-    return finish(`${pitchLabel}, swing and miss${strikes === 3 ? ' — strike three' : ` — strike ${strikes}`}`, { balls: count.balls, strikes }, actual, inZone, missInches, strikes === 3);
-  }
-  if (Math.random() < 0.42) {
-    const strikes = Math.min(2, count.strikes + 1);
-    return finish(`${pitchLabel}, fouled away${count.strikes === 2 ? ' — still 2 strikes' : ''}`, { balls: count.balls, strikes }, actual, inZone, missInches, false);
-  }
-  const quality = Math.random();
-  const outcome = quality < 0.56 ? 'put in play — fielded for an out' : quality < 0.82 ? 'lined into the outfield for a hit' : 'driven deep — extra bases';
-  return finish(`${pitchLabel}, ${outcome}`, count, actual, inZone, missInches, true);
+function ratio(profile: RateProfile | undefined, reference: RateProfile, key: RateKey, exponent: number) {
+  if (!profile || !reference[key]) return 1;
+  const raw = Math.max(0.65, Math.min(1.45, profile[key] / reference[key]));
+  return raw ** exponent;
 }
 
-function finish(message: string, count: Count, actual: Point, inZone: boolean, missInches: number, terminal: boolean): PitchResult {
-  return { message: `${message.charAt(0).toUpperCase()}${message.slice(1)}`, count, actual, inZone, missInches, terminal };
+function hotZoneKey(point: Point) {
+  const horizontal = point.x < 39 ? 'left' : point.x > 61 ? 'right' : 'middle';
+  const vertical = point.y < 34 ? 'upper' : point.y > 60 ? 'lower' : 'middle';
+  return `${vertical}_${horizontal}`;
+}
+
+function sequenceContext(history: PitchHistoryEntry[], pitch: Pitch, actual: Point, velocity: number) {
+  const previous = history.at(-1);
+  if (!previous) return { profiles: [] as RateProfile[], labels: [] as string[] };
+
+  const profiles: RateProfile[] = [];
+  const labels: string[] = [];
+  const add = (key: string, label: string) => {
+    const sequenceProfile = model.sequences[key];
+    if (sequenceProfile) {
+      profiles.push(sequenceProfile);
+      labels.push(label);
+    }
+  };
+
+  add(previous.pitchCode === pitch.code ? 'repeat' : 'change', previous.pitchCode === pitch.code ? 'repeated pitch' : 'pitch change');
+  if (previous.actual.y < 34 && actual.y > 60) add('highToLow', 'high-to-low setup');
+  if (Math.abs(previous.velocity - velocity) >= 7) add('velocityContrast', '7+ mph separation');
+  if (FASTBALLS.has(previous.pitchCode) && !FASTBALLS.has(pitch.code)) add('fastballToSoft', 'fastball-to-soft');
+  return { profiles, labels };
+}
+
+function commandLocation(pitch: Pitch, target: Point) {
+  const command = model.commandByPitch[pitch.code] ?? model.commandByPitch.ALL;
+  const axisSigmaInches = command.medianMissInches / RAYLEIGH_MEDIAN_FACTOR;
+  const xMissInches = normalRandom() * axisSigmaInches;
+  const yMissInches = normalRandom() * axisSigmaInches;
+  return {
+    actual: {
+      x: clampLocation(target.x + xMissInches / X_INCHES_PER_PERCENT),
+      y: clampLocation(target.y + yMissInches / Y_INCHES_PER_PERCENT),
+    },
+    missInches: Math.hypot(xMissInches, yMissInches),
+    command,
+  };
+}
+
+export function resolvePitch({ pitch, target, count, history }: { pitch: Pitch; target: Point; count: Count; history: PitchHistoryEntry[] }): PitchResult {
+  const { actual, missInches, command } = commandLocation(pitch, target);
+  const inZone = actual.x >= 17 && actual.x <= 83 && actual.y >= 8 && actual.y <= 86;
+  const velocity = Math.max(pitch.avgVelocity - 3.5, Math.min(pitch.maxVelocity, pitch.avgVelocity + normalRandom() * 1.35));
+  const locationProfile = inZone ? model.zone : model.chase;
+  const pitchProfile = model.byPitch[pitch.code] ?? model.overall;
+  const countProfile = model.byCount[`${count.balls}-${count.strikes}`] ?? model.overall;
+  const zoneKey = inZone ? hotZoneKey(actual) : null;
+  const hotProfile = zoneKey ? model.hotZones[zoneKey] : undefined;
+  const sequence = sequenceContext(history, pitch, actual, velocity);
+  const pitchLabel = `${Math.round(velocity)} mph ${pitch.name.toLowerCase()}`;
+  const factors = [
+    `${count.balls}-${count.strikes} count`,
+    inZone && zoneKey ? `${zoneKey.replace('_', ' ')} hot zone` : 'chase location',
+    ...sequence.labels,
+    `command: ${command.medianMissInches.toFixed(1)} in median (n=${command.sample})`,
+  ];
+
+  let swingProbability = locationProfile.swing;
+  swingProbability *= ratio(countProfile, model.overall, 'swing', 0.55);
+  swingProbability *= ratio(pitchProfile, model.overall, 'swing', 0.4);
+  swingProbability *= ratio(hotProfile, model.zone, 'swing', 0.65);
+  for (const profile of sequence.profiles) swingProbability *= ratio(profile, model.overall, 'swing', 0.4);
+  swingProbability = clampProbability(swingProbability, 0.04, 0.96);
+
+  if (Math.random() >= swingProbability) {
+    if (inZone) {
+      const strikes = count.strikes + 1;
+      return finish({ pitch, velocity, actual, outcome: 'called_strike', message: `${pitchLabel}, called strike${strikes === 3 ? ' three' : ` ${strikes}`}`, count: { balls: count.balls, strikes }, inZone, missInches, terminal: strikes === 3, factors });
+    }
+    const balls = count.balls + 1;
+    return finish({ pitch, velocity, actual, outcome: 'ball', message: `${pitchLabel}, ball ${balls}${balls === 4 ? ' — Ohtani walks' : ''}`, count: { balls, strikes: count.strikes }, inZone, missInches, terminal: balls === 4, factors });
+  }
+
+  let contactProbability = locationProfile.contact;
+  contactProbability *= ratio(countProfile, model.overall, 'contact', 0.45);
+  contactProbability *= ratio(pitchProfile, model.overall, 'contact', 0.5);
+  contactProbability *= ratio(hotProfile, model.zone, 'contact', 0.65);
+  for (const profile of sequence.profiles) contactProbability *= ratio(profile, model.overall, 'contact', 0.45);
+  const pitcherWhiffContact = (1 - pitch.whiff / 100) / 0.75;
+  contactProbability *= Math.max(0.78, Math.min(1.16, pitcherWhiffContact ** 0.45));
+  contactProbability = clampProbability(contactProbability, 0.22, 0.95);
+
+  if (Math.random() >= contactProbability) {
+    const strikes = count.strikes + 1;
+    return finish({ pitch, velocity, actual, outcome: 'whiff', message: `${pitchLabel}, swing and miss${strikes === 3 ? ' — strike three' : ` — strike ${strikes}`}`, count: { balls: count.balls, strikes }, inZone, missInches, terminal: strikes === 3, factors });
+  }
+
+  let foulProbability = locationProfile.foulOnContact;
+  foulProbability *= ratio(pitchProfile, model.overall, 'foulOnContact', 0.45);
+  foulProbability *= ratio(hotProfile, model.zone, 'foulOnContact', 0.4);
+  for (const profile of sequence.profiles) foulProbability *= ratio(profile, model.overall, 'foulOnContact', 0.25);
+  foulProbability = clampProbability(foulProbability, 0.25, 0.72);
+
+  if (Math.random() < foulProbability) {
+    const strikes = Math.min(2, count.strikes + 1);
+    return finish({ pitch, velocity, actual, outcome: 'foul', message: `${pitchLabel}, fouled away${count.strikes === 2 ? ' — still 2 strikes' : ''}`, count: { balls: count.balls, strikes }, inZone, missInches, terminal: false, factors });
+  }
+
+  let hitProbability = locationProfile.hitOnBip;
+  hitProbability *= ratio(pitchProfile, model.overall, 'hitOnBip', 0.5);
+  hitProbability *= ratio(countProfile, model.overall, 'hitOnBip', 0.2);
+  hitProbability *= ratio(hotProfile, model.zone, 'hitOnBip', 0.7);
+  for (const profile of sequence.profiles) hitProbability *= ratio(profile, model.overall, 'hitOnBip', 0.35);
+  hitProbability = clampProbability(hitProbability, 0.16, 0.62);
+
+  if (Math.random() >= hitProbability) {
+    return finish({ pitch, velocity, actual, outcome: 'in_play_out', message: `${pitchLabel}, put in play — fielded for an out`, count, inZone, missInches, terminal: true, factors });
+  }
+
+  let extraBaseProbability = locationProfile.extraBaseOnHit;
+  extraBaseProbability *= ratio(pitchProfile, model.overall, 'extraBaseOnHit', 0.45);
+  extraBaseProbability *= ratio(hotProfile, model.zone, 'extraBaseOnHit', 0.65);
+  for (const profile of sequence.profiles) extraBaseProbability *= ratio(profile, model.overall, 'extraBaseOnHit', 0.3);
+  extraBaseProbability = clampProbability(extraBaseProbability, 0.16, 0.7);
+  const extraBase = Math.random() < extraBaseProbability;
+  return finish({ pitch, velocity, actual, outcome: extraBase ? 'extra_base' : 'hit', message: `${pitchLabel}, ${extraBase ? 'driven deep — extra bases' : 'lined into the outfield for a hit'}`, count, inZone, missInches, terminal: true, factors });
+}
+
+function finish({ pitch, velocity, actual, outcome, message, count, inZone, missInches, terminal, factors }: { pitch: Pitch; velocity: number; actual: Point; outcome: Outcome; message: string; count: Count; inZone: boolean; missInches: number; terminal: boolean; factors: string[] }): PitchResult {
+  return {
+    pitchCode: pitch.code,
+    velocity,
+    actual,
+    outcome,
+    message: `${message.charAt(0).toUpperCase()}${message.slice(1)}`,
+    count,
+    inZone,
+    missInches,
+    terminal,
+    factors,
+  };
 }

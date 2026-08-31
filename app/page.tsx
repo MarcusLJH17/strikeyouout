@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowDownLeft, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUp, RotateCcw, Shuffle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { DAILY_MATCHUP, type Pitch } from '@/lib/daily-matchup';
-import { resolvePitch, type PitchResult } from '@/lib/game-engine';
+import { DAILY_MATCHUP, MATCHUP_MODEL, type Pitch } from '@/lib/daily-matchup';
+import { resolvePitch, type PitchHistoryEntry, type PitchResult } from '@/lib/game-engine';
 
 type Count = { balls: number; strikes: number };
 type Aim = { x: number; y: number };
@@ -19,6 +19,7 @@ export default function Home() {
   const [result, setResult] = useState<PitchResult | null>(null);
   const [pitchNumber, setPitchNumber] = useState(1);
   const [plateAppearanceOver, setPlateAppearanceOver] = useState(false);
+  const [history, setHistory] = useState<PitchHistoryEntry[]>([]);
   const targetRef = useRef<HTMLButtonElement>(null);
 
   const countLabel = useMemo(() => `${count.balls}–${count.strikes}`, [count]);
@@ -32,6 +33,7 @@ export default function Home() {
         setResult(null);
         setPitchNumber(1);
         setPlateAppearanceOver(false);
+        setHistory([]);
         return;
       }
 
@@ -57,8 +59,14 @@ export default function Home() {
 
   function throwPitch() {
     if (plateAppearanceOver) return;
-    const next = resolvePitch({ pitch: selectedPitch, target: aim, count });
+    const next = resolvePitch({ pitch: selectedPitch, target: aim, count, history });
     setResult(next);
+    setHistory((previous) => [...previous, {
+      pitchCode: next.pitchCode,
+      actual: next.actual,
+      velocity: next.velocity,
+      outcome: next.outcome,
+    }]);
     setPitchNumber((value) => value + 1);
     if (next.terminal) setPlateAppearanceOver(true);
     else setCount(next.count);
@@ -70,6 +78,7 @@ export default function Home() {
     setResult(null);
     setPitchNumber(1);
     setPlateAppearanceOver(false);
+    setHistory([]);
   }
 
   return (
@@ -153,13 +162,13 @@ export default function Home() {
 
           <section className="order-1 overflow-hidden rounded-xl border border-white/8 bg-[#0a1626] lg:order-2">
             <div className="min-h-[88px] border-b border-white/8 bg-black/15 px-4 py-4 text-center sm:px-8">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Pitch {pitchNumber}</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Pitch {result ? pitchNumber - 1 : pitchNumber}</p>
               <p aria-live="polite" className="mt-1 min-h-7 text-lg font-bold sm:text-xl">{result?.message ?? 'Choose a pitch. Aim at the plate. Then throw.'}</p>
-              {result && <p className="mt-1 text-xs text-slate-500">Missed target by {result.missInches.toFixed(1)} in.</p>}
+              {result && <p className="mt-1 text-xs text-slate-500">Missed target by {result.missInches.toFixed(1)} in. · {result.factors.slice(0, 3).join(' · ')}</p>}
             </div>
 
             <div className="relative mx-auto aspect-[16/11] min-h-[410px] max-w-[850px] overflow-hidden bg-[#071a2d]">
-              <div className="pointer-events-none absolute inset-x-[12%] bottom-0 h-[30%] bg-[linear-gradient(to_bottom,transparent_0%,rgba(22,54,43,.38)_32%,#17372d_100%)]" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[32%] bg-[linear-gradient(to_bottom,transparent_0%,rgba(133,83,48,.5)_30%,#70452b_100%)]" />
               <div className="pointer-events-none absolute bottom-[5%] left-1/2 h-5 w-7 -translate-x-1/2 bg-[#d6d4c7]/35 [clip-path:polygon(50%_0,100%_35%,82%_100%,18%_100%,0_35%)]" />
 
               <div className={`pointer-events-none absolute top-[28%] z-10 text-center opacity-70 ${DAILY_MATCHUP.batter.bats === 'L' ? 'left-[14%]' : 'right-[14%]'}`}>
@@ -200,13 +209,13 @@ export default function Home() {
             <div className="border-b border-white/8 pb-4">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">At the plate · LHB</p>
               <h2 className="mt-1 text-xl font-extrabold">Shohei Ohtani</h2>
-              <p className="mt-1 text-xs text-slate-500">Demo batting response profile</p>
+              <p className="mt-1 text-xs text-slate-500">2026 vs. RHP · {MATCHUP_MODEL.metadata.samplePitches.toLocaleString()} pitches</p>
             </div>
             <dl className="grid grid-cols-2 gap-x-3 gap-y-4 py-4">
-              <Stat label="Zone swing" value="73%" /><Stat label="Chase" value="21%" />
-              <Stat label="Zone contact" value="82%" /><Stat label="Chase contact" value="54%" />
+              <Stat label="Zone swing" value={formatRate(MATCHUP_MODEL.zone.swing)} /><Stat label="Chase" value={formatRate(MATCHUP_MODEL.chase.swing)} />
+              <Stat label="Zone contact" value={formatRate(MATCHUP_MODEL.zone.contact)} /><Stat label="Chase contact" value={formatRate(MATCHUP_MODEL.chase.contact)} />
             </dl>
-            <div className="rounded-lg border border-amber-300/15 bg-amber-300/[0.06] p-3 text-xs leading-5 text-amber-100/65">Batter probabilities are temporary model inputs. Pitch arsenal figures are a 2026 Statcast snapshot.</div>
+            <div className="rounded-lg border border-blue-300/15 bg-blue-300/[0.06] p-3 text-xs leading-5 text-blue-100/65">Results adjust for count, pitch type, location hot zone, command, and the pitches already thrown in this at-bat.</div>
             <p className="mt-4 text-[10px] leading-4 text-slate-600">Data snapshot: Aug 30, 2026 · Source: Baseball Savant · Unofficial prototype</p>
           </aside>
         </div>
@@ -221,6 +230,10 @@ function CountLights({ label, active, total, color }: { label: string; active: n
 
 function Stat({ label, value }: { label: string; value: string }) {
   return <div><dt className="text-[9px] font-bold uppercase tracking-[0.13em] text-slate-600">{label}</dt><dd className="mt-0.5 font-mono text-lg font-bold text-slate-300">{value}</dd></div>;
+}
+
+function formatRate(rate: number) {
+  return `${Math.round(rate * 100)}%`;
 }
 
 function MovementArrow({ pitch, throws }: { pitch: Pitch; throws: 'R' | 'L' }) {

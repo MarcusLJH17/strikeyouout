@@ -1,0 +1,364 @@
+{
+  "metadata": {
+    "batter": "Shohei Ohtani",
+    "batterId": 660271,
+    "batterSide": "L",
+    "pitcherThrows": "R",
+    "season": 2026,
+    "through": "2026-08-30",
+    "generatedOn": "2026-08-31",
+    "samplePitches": 1541,
+    "source": "Baseball Savant Statcast Search CSV",
+    "commandSource": "OpenCommand inferred catcher targets, CC BY-NC-SA 4.0"
+  },
+  "overall": {
+    "sample": 1541,
+    "swing": 0.4607,
+    "contact": 0.7225,
+    "foulOnContact": 0.5419,
+    "hitOnBip": 0.3957,
+    "extraBaseOnHit": 0.4086
+  },
+  "zone": {
+    "sample": 623,
+    "swing": 0.6709,
+    "contact": 0.8182,
+    "foulOnContact": 0.5292,
+    "hitOnBip": 0.3665,
+    "extraBaseOnHit": 0.4576
+  },
+  "chase": {
+    "sample": 918,
+    "swing": 0.3181,
+    "contact": 0.5856,
+    "foulOnContact": 0.5673,
+    "hitOnBip": 0.4595,
+    "extraBaseOnHit": 0.3235
+  },
+  "byCount": {
+    "0-0": {
+      "sample": 382,
+      "swing": 0.3677,
+      "contact": 0.7043,
+      "foulOnContact": 0.5724,
+      "hitOnBip": 0.3089,
+      "extraBaseOnHit": 0.5253
+    },
+    "0-1": {
+      "sample": 191,
+      "swing": 0.4201,
+      "contact": 0.7697,
+      "foulOnContact": 0.5499,
+      "hitOnBip": 0.4876,
+      "extraBaseOnHit": 0.4026
+    },
+    "0-2": {
+      "sample": 101,
+      "swing": 0.5407,
+      "contact": 0.732,
+      "foulOnContact": 0.5673,
+      "hitOnBip": 0.3135,
+      "extraBaseOnHit": 0.3476
+    },
+    "1-0": {
+      "sample": 152,
+      "swing": 0.4692,
+      "contact": 0.704,
+      "foulOnContact": 0.5132,
+      "hitOnBip": 0.4764,
+      "extraBaseOnHit": 0.5203
+    },
+    "1-1": {
+      "sample": 166,
+      "swing": 0.4588,
+      "contact": 0.6613,
+      "foulOnContact": 0.5323,
+      "hitOnBip": 0.4399,
+      "extraBaseOnHit": 0.3227
+    },
+    "1-2": {
+      "sample": 121,
+      "swing": 0.4769,
+      "contact": 0.6742,
+      "foulOnContact": 0.5462,
+      "hitOnBip": 0.4031,
+      "extraBaseOnHit": 0.3444
+    },
+    "2-0": {
+      "sample": 48,
+      "swing": 0.452,
+      "contact": 0.7541,
+      "foulOnContact": 0.5391,
+      "hitOnBip": 0.497,
+      "extraBaseOnHit": 0.3722
+    },
+    "2-1": {
+      "sample": 97,
+      "swing": 0.4625,
+      "contact": 0.6796,
+      "foulOnContact": 0.5567,
+      "hitOnBip": 0.4036,
+      "extraBaseOnHit": 0.5803
+    },
+    "2-2": {
+      "sample": 143,
+      "swing": 0.6227,
+      "contact": 0.7679,
+      "foulOnContact": 0.5031,
+      "hitOnBip": 0.3373,
+      "extraBaseOnHit": 0.341
+    },
+    "3-0": {
+      "sample": 18,
+      "swing": 0.3761,
+      "contact": 0.7225,
+      "foulOnContact": 0.5419,
+      "hitOnBip": 0.3957,
+      "extraBaseOnHit": 0.4086
+    },
+    "3-1": {
+      "sample": 42,
+      "swing": 0.4169,
+      "contact": 0.7203,
+      "foulOnContact": 0.5505,
+      "hitOnBip": 0.4131,
+      "extraBaseOnHit": 0.3113
+    },
+    "3-2": {
+      "sample": 80,
+      "swing": 0.5429,
+      "contact": 0.7902,
+      "foulOnContact": 0.5343,
+      "hitOnBip": 0.3479,
+      "extraBaseOnHit": 0.3722
+    }
+  },
+  "byPitch": {
+    "CH": {
+      "sample": 270,
+      "swing": 0.4407,
+      "contact": 0.6579,
+      "foulOnContact": 0.4728,
+      "hitOnBip": 0.4043,
+      "extraBaseOnHit": 0.318
+    },
+    "CU": {
+      "sample": 124,
+      "swing": 0.5048,
+      "contact": 0.6747,
+      "foulOnContact": 0.574,
+      "hitOnBip": 0.3633,
+      "extraBaseOnHit": 0.3284
+    },
+    "FC": {
+      "sample": 143,
+      "swing": 0.4612,
+      "contact": 0.7521,
+      "foulOnContact": 0.5367,
+      "hitOnBip": 0.4468,
+      "extraBaseOnHit": 0.4134
+    },
+    "FF": {
+      "sample": 552,
+      "swing": 0.4633,
+      "contact": 0.7392,
+      "foulOnContact": 0.5992,
+      "hitOnBip": 0.3597,
+      "extraBaseOnHit": 0.3718
+    },
+    "FS": {
+      "sample": 76,
+      "swing": 0.4663,
+      "contact": 0.7468,
+      "foulOnContact": 0.5601,
+      "hitOnBip": 0.3859,
+      "extraBaseOnHit": 0.3557
+    },
+    "KC": {
+      "sample": 39,
+      "swing": 0.4538,
+      "contact": 0.718,
+      "foulOnContact": 0.5359,
+      "hitOnBip": 0.3837,
+      "extraBaseOnHit": 0.3269
+    },
+    "SI": {
+      "sample": 128,
+      "swing": 0.4521,
+      "contact": 0.7984,
+      "foulOnContact": 0.4961,
+      "hitOnBip": 0.432,
+      "extraBaseOnHit": 0.4414
+    },
+    "SL": {
+      "sample": 131,
+      "swing": 0.4592,
+      "contact": 0.7192,
+      "foulOnContact": 0.5566,
+      "hitOnBip": 0.4161,
+      "extraBaseOnHit": 0.5793
+    },
+    "ST": {
+      "sample": 78,
+      "swing": 0.4499,
+      "contact": 0.703,
+      "foulOnContact": 0.4845,
+      "hitOnBip": 0.3876,
+      "extraBaseOnHit": 0.5906
+    }
+  },
+  "hotZones": {
+    "lower_left": {
+      "sample": 62,
+      "swing": 0.6988,
+      "contact": 0.832,
+      "foulOnContact": 0.5854,
+      "hitOnBip": 0.3749,
+      "extraBaseOnHit": 0.4282
+    },
+    "lower_middle": {
+      "sample": 81,
+      "swing": 0.6543,
+      "contact": 0.8123,
+      "foulOnContact": 0.4609,
+      "hitOnBip": 0.4024,
+      "extraBaseOnHit": 0.4555
+    },
+    "lower_right": {
+      "sample": 70,
+      "swing": 0.5789,
+      "contact": 0.8496,
+      "foulOnContact": 0.4742,
+      "hitOnBip": 0.3087,
+      "extraBaseOnHit": 0.3262
+    },
+    "middle_left": {
+      "sample": 58,
+      "swing": 0.6971,
+      "contact": 0.8381,
+      "foulOnContact": 0.4581,
+      "hitOnBip": 0.3552,
+      "extraBaseOnHit": 0.4841
+    },
+    "middle_middle": {
+      "sample": 86,
+      "swing": 0.7209,
+      "contact": 0.807,
+      "foulOnContact": 0.534,
+      "hitOnBip": 0.3974,
+      "extraBaseOnHit": 0.6214
+    },
+    "middle_right": {
+      "sample": 81,
+      "swing": 0.6047,
+      "contact": 0.879,
+      "foulOnContact": 0.5048,
+      "hitOnBip": 0.4459,
+      "extraBaseOnHit": 0.4555
+    },
+    "upper_left": {
+      "sample": 49,
+      "swing": 0.7638,
+      "contact": 0.78,
+      "foulOnContact": 0.6164,
+      "hitOnBip": 0.4564,
+      "extraBaseOnHit": 0.3262
+    },
+    "upper_middle": {
+      "sample": 68,
+      "swing": 0.7676,
+      "contact": 0.7627,
+      "foulOnContact": 0.5597,
+      "hitOnBip": 0.2655,
+      "extraBaseOnHit": 0.4098
+    },
+    "upper_right": {
+      "sample": 68,
+      "swing": 0.5723,
+      "contact": 0.8182,
+      "foulOnContact": 0.578,
+      "hitOnBip": 0.2707,
+      "extraBaseOnHit": 0.5511
+    }
+  },
+  "sequences": {
+    "change": {
+      "sample": 785,
+      "swing": 0.4769,
+      "contact": 0.7233,
+      "foulOnContact": 0.5175,
+      "hitOnBip": 0.4107,
+      "extraBaseOnHit": 0.3852
+    },
+    "fastballToSoft": {
+      "sample": 296,
+      "swing": 0.4749,
+      "contact": 0.7087,
+      "foulOnContact": 0.506,
+      "hitOnBip": 0.4142,
+      "extraBaseOnHit": 0.4423
+    },
+    "highToLow": {
+      "sample": 173,
+      "swing": 0.4325,
+      "contact": 0.6885,
+      "foulOnContact": 0.5501,
+      "hitOnBip": 0.389,
+      "extraBaseOnHit": 0.2668
+    },
+    "repeat": {
+      "sample": 373,
+      "swing": 0.5202,
+      "contact": 0.7327,
+      "foulOnContact": 0.5617,
+      "hitOnBip": 0.4192,
+      "extraBaseOnHit": 0.4077
+    },
+    "velocityContrast": {
+      "sample": 423,
+      "swing": 0.4973,
+      "contact": 0.7125,
+      "foulOnContact": 0.5224,
+      "hitOnBip": 0.3828,
+      "extraBaseOnHit": 0.4241
+    }
+  },
+  "commandByPitch": {
+    "ALL": {
+      "sample": 1929,
+      "medianMissInches": 10.355
+    },
+    "CH": {
+      "sample": 116,
+      "medianMissInches": 11.446
+    },
+    "CS": {
+      "sample": 4,
+      "medianMissInches": 10.381
+    },
+    "CU": {
+      "sample": 283,
+      "medianMissInches": 12.752
+    },
+    "FC": {
+      "sample": 198,
+      "medianMissInches": 10.039
+    },
+    "FF": {
+      "sample": 393,
+      "medianMissInches": 9.622
+    },
+    "SI": {
+      "sample": 634,
+      "medianMissInches": 9.333
+    },
+    "SL": {
+      "sample": 47,
+      "medianMissInches": 9.732
+    },
+    "ST": {
+      "sample": 254,
+      "medianMissInches": 12.433
+    }
+  }
+}
