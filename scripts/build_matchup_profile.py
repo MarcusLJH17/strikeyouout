@@ -53,6 +53,8 @@ WHIFF_DESCRIPTIONS = {
 HIT_EVENTS = {"single", "double", "triple", "home_run"}
 EXTRA_BASE_EVENTS = {"double", "triple", "home_run"}
 FASTBALLS = {"FF", "SI", "FC"}
+BASEBALL_RADIUS_FEET = 1.45 / 12
+PLATE_HALF_WIDTH_FEET = 17 / 24
 
 
 def fetch_text(url: str) -> str:
@@ -124,7 +126,14 @@ def is_zone(row: dict[str, str]) -> bool:
     z = number(row, "plate_z")
     top = number(row, "sz_top")
     bottom = number(row, "sz_bot")
-    return x is not None and z is not None and top is not None and bottom is not None and abs(x) <= 0.83 and bottom <= z <= top
+    return (
+        x is not None
+        and z is not None
+        and top is not None
+        and bottom is not None
+        and abs(x) <= PLATE_HALF_WIDTH_FEET + BASEBALL_RADIUS_FEET
+        and bottom - BASEBALL_RADIUS_FEET <= z <= top + BASEBALL_RADIUS_FEET
+    )
 
 
 def hot_zone(row: dict[str, str]) -> str | None:

@@ -20,6 +20,8 @@ const model = MATCHUP_MODEL as unknown as ModelProfile;
 const FASTBALLS = new Set(['FF', 'SI', 'FC']);
 const X_INCHES_PER_PERCENT = 17 / 66;
 const Y_INCHES_PER_PERCENT = 40 / 78;
+const BASEBALL_RADIUS_INCHES = 1.45;
+const ZONE = { left: 17, right: 83, top: 8, bottom: 86 } as const;
 const RAYLEIGH_MEDIAN_FACTOR = Math.sqrt(2 * Math.log(2));
 
 export type PitchHistoryEntry = {
@@ -57,6 +59,21 @@ function hotZoneKey(point: Point) {
   const horizontal = point.x < 39 ? 'left' : point.x > 61 ? 'right' : 'middle';
   const vertical = point.y < 34 ? 'upper' : point.y > 60 ? 'lower' : 'middle';
   return `${vertical}_${horizontal}`;
+}
+
+function touchesStrikeZone(point: Point) {
+  const radiusX = BASEBALL_RADIUS_INCHES / X_INCHES_PER_PERCENT;
+  const radiusY = BASEBALL_RADIUS_INCHES / Y_INCHES_PER_PERCENT;
+  return point.x + radiusX >= ZONE.left
+    && point.x - radiusX <= ZONE.right
+    && point.y + radiusY >= ZONE.top
+    && point.y - radiusY <= ZONE.bottom;
+}
+
+function advanceCount(count: Count, outcome: 'ball' | 'strike' | 'foul'): Count {
+  if (outcome === 'ball') return { balls: count.balls + 1, strikes: count.strikes };
+  if (outcome === 'foul') return { balls: count.balls, strikes: Math.min(2, count.strikes + 1) };
+  return { balls: count.balls, strikes: count.strikes + 1 };
 }
 
 function sequenceContext(history: PitchHistoryEntry[], pitch: Pitch, actual: Point, velocity: number) {
@@ -97,7 +114,8 @@ function commandLocation(pitch: Pitch, target: Point) {
 
 export function resolvePitch({ pitch, target, count, history }: { pitch: Pitch; target: Point; count: Count; history: PitchHistoryEntry[] }): PitchResult {
   const { actual, missInches, command } = commandLocation(pitch, target);
-  const inZone = actual.x >= 17 && actual.x <= 83 && actual.y >= 8 && actual.y <= 86;
+  // ABS rules a strike when any part of the baseball touches any part of the zone.
+  const inZone = touchesStrikeZone(actual);
   const velocity = Math.max(pitch.avgVelocity - 3.5, Math.min(pitch.maxVelocity, pitch.avgVelocity + normalRandom() * 1.35));
   const locationProfile = inZone ? model.zone : model.chase;
   const pitchProfile = model.byPitch[pitch.code] ?? model.overall;
@@ -122,11 +140,11 @@ export function resolvePitch({ pitch, target, count, history }: { pitch: Pitch; 
 
   if (Math.random() >= swingProbability) {
     if (inZone) {
-      const strikes = count.strikes + 1;
-      return finish({ pitch, velocity, actual, outcome: 'called_strike', message: `${pitchLabel}, called strike${strikes === 3 ? ' three' : ` ${strikes}`}`, count: { balls: count.balls, strikes }, inZone, missInches, terminal: strikes === 3, factors });
+      const nextCount = advanceCount(count, 'strike');
+      return finish({ pitch, velocity, actual, outcome: 'called_strike', message: `${pitchLabel}, called strike${nextCount.strikes === 3 ? ' three' : ` ${nextCount.strikes}`}`, count: nextCount, inZone, missInches, terminal: nextCount.strikes === 3, factors });
     }
-    const balls = count.balls + 1;
-    return finish({ pitch, velocity, actual, outcome: 'ball', message: `${pitchLabel}, ball ${balls}${balls === 4 ? ' — Ohtani walks' : ''}`, count: { balls, strikes: count.strikes }, inZone, missInches, terminal: balls === 4, factors });
+    const nextCount = advanceCount(count, 'ball');
+    return finish({ pitch, velocity, actual, outcome: 'ball', message: `${pitchLabel}, ball ${nextCount.balls}${nextCount.balls === 4 ? ' — Ohtani walks' : ''}`, count: nextCount, inZone, missInches, terminal: nextCount.balls === 4, factors });
   }
 
   let contactProbability = locationProfile.contact;
@@ -139,8 +157,8 @@ export function resolvePitch({ pitch, target, count, history }: { pitch: Pitch; 
   contactProbability = clampProbability(contactProbability, 0.22, 0.95);
 
   if (Math.random() >= contactProbability) {
-    const strikes = count.strikes + 1;
-    return finish({ pitch, velocity, actual, outcome: 'whiff', message: `${pitchLabel}, swing and miss${strikes === 3 ? ' — strike three' : ` — strike ${strikes}`}`, count: { balls: count.balls, strikes }, inZone, missInches, terminal: strikes === 3, factors });
+    const nextCount = advanceCount(count, 'strike');
+    return finish({ pitch, velocity, actual, outcome: 'whiff', message: `${pitchLabel}, swing and miss${nextCount.strikes === 3 ? ' — strike three' : ` — strike ${nextCount.strikes}`}`, count: nextCount, inZone, missInches, terminal: nextCount.strikes === 3, factors });
   }
 
   let foulProbability = locationProfile.foulOnContact;
@@ -150,8 +168,10 @@ export function resolvePitch({ pitch, target, count, history }: { pitch: Pitch; 
   foulProbability = clampProbability(foulProbability, 0.25, 0.72);
 
   if (Math.random() < foulProbability) {
-    const strikes = Math.min(2, count.strikes + 1);
-    return finish({ pitch, velocity, actual, outcome: 'foul', message: `${pitchLabel}, fouled away${count.strikes === 2 ? ' — still 2 strikes' : ''}`, count: { balls: count.balls, strikes }, inZone, missInches, terminal: false, factors });
+    const nextCount = advanceCount(count, 'foul');
+    const foulDescription = inZone ? 'fouled away' : 'chased and fouled away';
+    const countDescription = count.strikes === 2 ? ' — count holds at 2 strikes' : ` — strike ${nextCount.strikes}`;
+    return finish({ pitch, velocity, actual, outcome: 'foul', message: `${pitchLabel}, ${foulDescription}${countDescription}`, count: nextCount, inZone, missInches, terminal: false, factors });
   }
 
   let hitProbability = locationProfile.hitOnBip;

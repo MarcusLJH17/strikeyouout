@@ -41,6 +41,7 @@ export default function Home() {
       const pitch = DAILY_MATCHUP.pitcher.pitches[pitchIndex];
       if (!pitch || event.ctrlKey || event.metaKey || event.altKey) return;
       event.preventDefault();
+      targetRef.current?.blur();
       setSelectedPitch(pitch);
     }
 
@@ -180,7 +181,7 @@ export default function Home() {
                 onPointerDown={(event) => { updateAim(event.clientX, event.clientY); event.currentTarget.setPointerCapture(event.pointerId); }}
                 onPointerUp={throwPitch}
                 disabled={plateAppearanceOver}
-                className="absolute left-1/2 top-[16%] z-20 h-[70%] w-[54%] max-w-[440px] -translate-x-1/2 cursor-crosshair touch-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 disabled:cursor-default"
+                className="absolute left-1/2 top-[16%] z-20 h-[70%] w-[54%] max-w-[440px] -translate-x-1/2 cursor-crosshair touch-none outline-none disabled:cursor-default"
               >
                 <span className="absolute left-[17%] top-[8%] h-[78%] w-[66%] border-2 border-[#d9e1df]/80 bg-white/[0.025] shadow-[0_0_25px_rgba(218,229,226,.08)]">
                   <span className="absolute inset-x-0 top-1/3 border-t border-white/15" /><span className="absolute inset-x-0 top-2/3 border-t border-white/15" />
