@@ -23,6 +23,8 @@ const Y_INCHES_PER_PERCENT = 40 / 78;
 const BASEBALL_RADIUS_INCHES = 1.45;
 const ZONE = { left: 17, right: 83, top: 8, bottom: 86 } as const;
 const RAYLEIGH_MEDIAN_FACTOR = Math.sqrt(2 * Math.log(2));
+const GAMEPLAY_COMMAND_SCALE = 0.5;
+const MAX_MISS_MEDIAN_MULTIPLIER = 2;
 
 export type PitchHistoryEntry = {
   pitchCode: string;
@@ -99,16 +101,24 @@ function sequenceContext(history: PitchHistoryEntry[], pitch: Pitch, actual: Poi
 
 function commandLocation(pitch: Pitch, target: Point) {
   const command = model.commandByPitch[pitch.code] ?? model.commandByPitch.ALL;
-  const axisSigmaInches = command.medianMissInches / RAYLEIGH_MEDIAN_FACTOR;
-  const xMissInches = normalRandom() * axisSigmaInches;
-  const yMissInches = normalRandom() * axisSigmaInches;
+  const modeledMedianMissInches = command.medianMissInches * GAMEPLAY_COMMAND_SCALE;
+  const axisSigmaInches = modeledMedianMissInches / RAYLEIGH_MEDIAN_FACTOR;
+  let xMissInches = normalRandom() * axisSigmaInches;
+  let yMissInches = normalRandom() * axisSigmaInches;
+  const rawMissInches = Math.hypot(xMissInches, yMissInches);
+  const maxMissInches = modeledMedianMissInches * MAX_MISS_MEDIAN_MULTIPLIER;
+  if (rawMissInches > maxMissInches) {
+    const tailScale = maxMissInches / rawMissInches;
+    xMissInches *= tailScale;
+    yMissInches *= tailScale;
+  }
   return {
     actual: {
       x: clampLocation(target.x + xMissInches / X_INCHES_PER_PERCENT),
       y: clampLocation(target.y + yMissInches / Y_INCHES_PER_PERCENT),
     },
     missInches: Math.hypot(xMissInches, yMissInches),
-    command,
+    command: { ...command, modeledMedianMissInches },
   };
 }
 
@@ -128,7 +138,7 @@ export function resolvePitch({ pitch, target, count, history }: { pitch: Pitch; 
     `${count.balls}-${count.strikes} count`,
     inZone && zoneKey ? `${zoneKey.replace('_', ' ')} hot zone` : 'chase location',
     ...sequence.labels,
-    `command: ${command.medianMissInches.toFixed(1)} in median (n=${command.sample})`,
+    `command: ${command.modeledMedianMissInches.toFixed(1)} in modeled median`,
   ];
 
   let swingProbability = locationProfile.swing;

@@ -23,7 +23,7 @@ Open `http://localhost:3000`.
 
 Ohtani's response profile is generated from 1,541 pitches he saw from right-handed pitchers through August 30, 2026. The checked-in generator derives swing, contact, foul, hit, and extra-base rates overall and by zone, count, pitch type, 3×3 location, and common two-pitch sequence patterns. Sparse subgroups are shrunk toward the relevant baseline before gameplay.
 
-Command uses OpenCommand's pitch-level catcher-target inference. The simulation draws horizontal and vertical miss from a centered Gaussian calibrated so the resulting radial miss has the published median for McLean and the selected pitch. The scale is data-derived; the error shape is still an explicit modeling assumption because public Statcast does not include the pitcher's intended target.
+Command starts with OpenCommand's pitch-level catcher-target inference. For playable aiming, the simulation uses half the published median miss for McLean and the selected pitch, then caps misses at twice that modeled median. Horizontal and vertical miss retain a centered Gaussian shape. Pitch-to-pitch command differences remain data-derived, while the gameplay scale and tail cap are explicit tuning choices because public Statcast does not include the pitcher's intended target and inferred broadcast targets add measurement noise.
 
 ## Recommended data architecture
 
