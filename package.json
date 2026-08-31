@@ -9,6 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "node --experimental-strip-types --test tests/count.test.ts",
     "lint": "oxlint app lib components/ui/button.tsx",
     "format": "oxfmt"
   },

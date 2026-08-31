@@ -4,10 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowDownLeft, ArrowDownRight, ArrowLeft, ArrowRight, ArrowUp, RotateCcw, Shuffle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { displayCount, type Count } from '@/lib/count';
 import { DAILY_MATCHUP, MATCHUP_MODEL, type Pitch } from '@/lib/daily-matchup';
 import { resolvePitch, type PitchHistoryEntry, type PitchResult } from '@/lib/game-engine';
 
-type Count = { balls: number; strikes: number };
 type Aim = { x: number; y: number };
 
 const INITIAL_AIM = { x: 50, y: 50 };
@@ -21,6 +21,8 @@ export default function Home() {
   const [plateAppearanceOver, setPlateAppearanceOver] = useState(false);
   const [history, setHistory] = useState<PitchHistoryEntry[]>([]);
   const targetRef = useRef<HTMLButtonElement>(null);
+  const activePointerRef = useRef<number | null>(null);
+  const throwLockedRef = useRef(false);
 
   const countLabel = useMemo(() => `${count.balls}–${count.strikes}`, [count]);
 
@@ -59,7 +61,8 @@ export default function Home() {
   }
 
   function throwPitch() {
-    if (plateAppearanceOver) return;
+    if (plateAppearanceOver || throwLockedRef.current) return;
+    throwLockedRef.current = true;
     const next = resolvePitch({ pitch: selectedPitch, target: aim, count, history });
     setResult(next);
     setHistory((previous) => [...previous, {
@@ -69,8 +72,11 @@ export default function Home() {
       outcome: next.outcome,
     }]);
     setPitchNumber((value) => value + 1);
-    if (next.terminal) setPlateAppearanceOver(true);
-    else setCount(next.count);
+    setCount(displayCount(next.count));
+    setPlateAppearanceOver(next.terminal);
+    window.requestAnimationFrame(() => {
+      throwLockedRef.current = false;
+    });
   }
 
   function resetPlateAppearance() {
@@ -80,6 +86,8 @@ export default function Home() {
     setPitchNumber(1);
     setPlateAppearanceOver(false);
     setHistory([]);
+    activePointerRef.current = null;
+    throwLockedRef.current = false;
   }
 
   return (
@@ -178,8 +186,18 @@ export default function Home() {
                 type="button"
                 aria-label={`Aim ${selectedPitch.name} at ${Math.round(aim.x)} percent horizontal, ${Math.round(aim.y)} percent vertical`}
                 onPointerMove={(event) => updateAim(event.clientX, event.clientY)}
-                onPointerDown={(event) => { updateAim(event.clientX, event.clientY); event.currentTarget.setPointerCapture(event.pointerId); }}
-                onPointerUp={throwPitch}
+                onPointerDown={(event) => {
+                  if (throwLockedRef.current) return;
+                  activePointerRef.current = event.pointerId;
+                  updateAim(event.clientX, event.clientY);
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                }}
+                onPointerUp={(event) => {
+                  if (activePointerRef.current !== event.pointerId) return;
+                  activePointerRef.current = null;
+                  throwPitch();
+                }}
+                onPointerCancel={() => { activePointerRef.current = null; }}
                 disabled={plateAppearanceOver}
                 className="absolute left-1/2 top-[16%] z-20 h-[70%] w-[54%] max-w-[440px] -translate-x-1/2 cursor-crosshair touch-none outline-none disabled:cursor-default"
               >

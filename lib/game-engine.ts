@@ -1,6 +1,6 @@
 import { MATCHUP_MODEL, type Pitch } from '@/lib/daily-matchup';
+import { advanceCount, type Count } from '@/lib/count';
 
-type Count = { balls: number; strikes: number };
 type Point = { x: number; y: number };
 type Outcome = 'called_strike' | 'ball' | 'whiff' | 'foul' | 'in_play_out' | 'hit' | 'extra_base';
 type RateKey = 'swing' | 'contact' | 'foulOnContact' | 'hitOnBip' | 'extraBaseOnHit';
@@ -70,12 +70,6 @@ function touchesStrikeZone(point: Point) {
     && point.x - radiusX <= ZONE.right
     && point.y + radiusY >= ZONE.top
     && point.y - radiusY <= ZONE.bottom;
-}
-
-function advanceCount(count: Count, outcome: 'ball' | 'strike' | 'foul'): Count {
-  if (outcome === 'ball') return { balls: count.balls + 1, strikes: count.strikes };
-  if (outcome === 'foul') return { balls: count.balls, strikes: Math.min(2, count.strikes + 1) };
-  return { balls: count.balls, strikes: count.strikes + 1 };
 }
 
 function sequenceContext(history: PitchHistoryEntry[], pitch: Pitch, actual: Point, velocity: number) {
